@@ -1,0 +1,28 @@
+# Core
+Django>=5.2,<7
+django-ninja>=1.4
+django-environ>=0.12
+django-redis>=5.4
+django-cors-headers>=4.7
+psycopg[binary]>=3.2
+
+# Tareas periódicas
+celery>=5.5,<6
+redis>=5.0
+
+# Datos financieros
+yfinance>=0.2.65
+pandas>=2.3
+numpy>=2.3
+feedparser>=6.0
+requests>=2.32
+vaderSentiment>=3.3.2
+
+# Agente de verificación (sección 5.2)
+anthropic>=0.57
+
+# Testing
+pytest>=8.3
+pytest-django>=4.11
+factory_boy>=3.3
+responses>=0.25

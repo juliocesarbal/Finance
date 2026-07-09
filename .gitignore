@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+db.sqlite3
+db_test.sqlite3
+/staticfiles/
+/media/
+
+# Entorno / secretos
+.env
+
+# Celery
+celerybeat-schedule*
+
+# IDE / SO
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
