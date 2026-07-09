@@ -735,3 +735,127 @@ Con este enfoque, la plataforma funciona como una herramienta de aprendizaje, an
 | Fuentes de noticias/analistas | yfinance + Google News RSS | + NewsAPI, Finnhub, Alpha Vantage News, MarketBeat, TipRanks, StockTwits (sección 8.6) |
 | Decisión final | Solo fórmula ponderada mecánica | + Agente de verificación (Anthropic API, tool use) sobre el top N escalado, con score ajustado y contradicciones detectadas explícitas |
 | Ranking de oportunidades | No existía como módulo propio | Nuevo: escalado en dos etapas (mecánico sobre todo el universo → agente solo sobre el top N) para controlar costo |
+
+---
+
+## Anexo B — Estado de implementación, pendientes y mejoras
+
+> **Actualizado: 2026-07-09**, tras el primer build completo del backend
+> (commit `eb91e80`, 83 tests en verde, pipeline verificado end-to-end contra
+> la base PostgreSQL de Railway con datos reales de yfinance y Google News).
+> Este anexo es la lista de trabajo viva: marcar y recortar a medida que se avance.
+
+### B.1 Implementado y verificado ✔
+
+- ✔ **V1–V6 del roadmap (sección 19)** completas en el backend Django:
+  las 10 apps (`core`, `market`, `news`, `fundamentals`, `portfolio`,
+  `simulation`, `risk`, `recommendation`, `experts`, `discovery`) con modelos,
+  servicios, API Django Ninja (`/api/docs`), Django Admin, tareas Celery
+  definidas, comandos de gestión y suite de tests sin red.
+- ✔ Score mecánico 5.1 + agente 5.2 (código y tests con mocks) + pipeline dos
+  etapas 5.3 con umbral y top N configurables.
+- ✔ Reglas centrales (18) y lenguaje prudente (20) aplicados: evidencia con
+  confiabilidad A+–E obligatoria, riesgos explícitos, guardrail de frases
+  prohibidas sobre la salida del agente, cap de cripto sin fundamentos (12).
+- ✔ Resiliencia 16.5: caché con TTL por tipo de dato, backoff exponencial ante
+  429, métrica en `/api/health`, interfaz `MarketDataProvider` swapeable.
+- ✔ Migración TimescaleDB condicional (hoy no-op en Railway; se activa sola si
+  algún día la base tiene la extensión).
+
+### B.2 Pendientes del propio roadmap (no implementado aún) ☐
+
+**Versión 7 (sección 19):**
+- ☐ **Django Channels / WebSockets**: alertas en tiempo real y el paso 10 del
+  flujo (sección 17). Hoy el resultado se persiste y se sirve por REST.
+- ☐ **Rebalanceo automático con impacto fiscal y comisiones** (hoy existe la
+  versión simple 4.9: sugerencias por desvío de peso objetivo, sin fiscalidad).
+- ☐ **Indicadores macroeconómicos globales** (World Bank, IMF, OECD — 8.1).
+- ☐ **Reportes ejecutivos en PDF descargables.**
+- ☐ Endurecimiento 16.5: dashboard/alertado de la tasa de 429 (hoy es un
+  contador) y evaluación de proveedor de pago (Polygon/Finnhub) si el volumen
+  crece — el swap ya es trivial gracias a la interfaz.
+
+**Fuentes ampliadas 8.6 (el doc las asigna a V4/V5; siguen sin integrar):**
+- ☐ NewsAPI.org, Finnhub y Alpha Vantage News & Sentiment como agregadores
+  adicionales (hoy: solo yfinance `.news` + Google News RSS).
+- ☐ MarketBeat / TipRanks para **cruzar** el consenso contra yfinance y
+  detectar discrepancias entre proveedores (sección 11).
+- ☐ StockTwits API y Reddit vía PRAW (señales sociales ya cuantificadas,
+  siempre con peso bajo — 8.4).
+- ☐ Finviz como screener para alimentar el motor discovery.
+
+**Fuera del backend:**
+- ☐ **Frontend Next.js completo (16.3)**: TypeScript + TanStack Query +
+  Zustand + TradingView Lightweight Charts + Tailwind/shadcn. La API REST con
+  OpenAPI ya está lista para consumirse.
+
+### B.3 Infraestructura y operación pendiente ☐
+
+- ☐ **`ANTHROPIC_API_KEY` sin cargar en `.env`** → el agente 5.2 todavía no
+  corrió en vivo (está demostrado con tests mockeados). Al cargarla:
+  `python manage.py run_scoring --escalate`.
+- ☐ **Redis + Celery Beat inactivos**: en esta máquina falta WSL2/Docker
+  (la instalación de Docker Desktop falló por eso). Pasos: `wsl --install`
+  como administrador → reiniciar → Docker Desktop → `docker compose up -d redis`
+  → worker `--pool=solo` + beat. Mientras tanto `refresh_all` cubre la cadencia
+  a demanda. Alternativa sin Docker: Redis gestionado en Railway.
+- ☐ **Autenticación de la API**: hoy es single-user (carteras del usuario
+  local, endpoints sin auth). JWT/sesiones + CORS definitivo llegan con el
+  frontend. Crear superusuario para `/admin` (`createsuperuser`).
+- ☐ **CI (GitHub Actions, 16.4)**: no configurada; el repo git es local y sin
+  remote. Falta workflow de tests + lint (ruff) al pushear.
+- ☐ **Despliegue a producción del backend**: DEBUG=False, `ALLOWED_HOSTS`,
+  estáticos, Nginx/gunicorn o servicio en Railway. Hoy corre como dev server.
+- ☐ **Backups/retención de la BD Railway** y rotación de credenciales
+  (la URL con password vive solo en `.env`, fuera de git).
+
+### B.4 Mejoras conocidas sobre lo ya implementado (deuda técnica honesta)
+
+- **Sentimiento**: VADER es un léxico en inglés → titulares en español tienden
+  a neutral (default conservador). Mejora V4: modelo multilingüe local o el
+  sentimiento ya calculado de Alpha Vantage como complemento.
+- **Cripto (12)**: implementado como penalización de riesgo + cap sin
+  fundamentos. Faltan las métricas on-chain reales del doc: TVL, usuarios
+  activos, tokenomics, desbloqueos, auditorías, actividad GitHub, concentración
+  de holders (requieren APIs tipo DeFiLlama/Etherscan/GitHub).
+- **Experts (10)**: la verificación contra FINRA BrokerCheck / SEC IAPD es
+  100 % manual vía admin. Falta el flujo asistido (links prellenados, campos de
+  chequeo) y la captura de análisis individuales de expertos con su historial.
+- **Discovery (6/13)**: la extracción de tickers es por regex
+  (`NYSE/NASDAQ: XXX`, `$XXX`) y solo vincula activos ya cargados; el resto
+  queda como candidato para curaduría. Los componentes "adopción" e "inversión
+  institucional" del score 13 son proxies de prensa (documentado en el código).
+  Mejorable con NER, screener externo y datos de flujos reales.
+- **Confiabilidad (9)**: los factores credenciales/historial/transparencia/
+  independencia arrancan neutrales (50) y se curan a mano; falta poblarlos por
+  autor/medio con datos reales para que el 60 % no-tipo de la fórmula trabaje.
+- **Backtesting (4.7)**: una sola estrategia (cruce SMA 50/200) y sin costos de
+  transacción/slippage. Agregar estrategias (RSI, momentum, DCA) y fricciones.
+- **Simulación (4.6)**: escenarios deterministas (r ± σ). Mejora: Monte Carlo
+  con percentiles (p5/p50/p95) manteniendo el disclaimer.
+- **DCF/WACC (4.3 bloque 5)**: supuestos globales (rf 4,2 %, ERP 5 %, costo de
+  deuda default 5 %). Mejorable: costo de deuda efectivo por empresa (intereses
+  reales/deuda), tasa libre de riesgo viva y sensibilidad del fair value.
+- **Escala del universo**: hoy 10 tickers de watchlist. Para S&P 500 completo:
+  descarga multi-ticker en lote, rate limiting más agresivo y probablemente el
+  proveedor de pago de B.2.
+- **Consenso (11)**: sumar `upgrades_downgrades` de yfinance para alertas de
+  cambios de recomendación individuales, además del snapshot agregado.
+- **Divergencia mecánico vs agente (5.2 punto 5)**: se muestra en
+  `/api/recommendation/ranking`, pero falta la **alerta explícita** cuando
+  supera un umbral (el doc la trata como señal en sí misma).
+- **Multimoneda**: la cartera asume USD; falta conversión FX para posiciones en
+  otras monedas (campo `currency` ya existe).
+- **Noticias**: `impact_score` es heurístico (categoría × |sentimiento| ×
+  confiabilidad); V4 pide refinar el ajuste del score general por noticia.
+
+### B.5 Desvíos deliberados respecto del texto original (documentados)
+
+- **Intradía no se persiste**: `MarketPrice` guarda solo barras diarias; lo
+  intradía se sirve en vivo desde la caché del provider (mantiene limpia la
+  serie y el constraint único). Revisar si el dashboard lo exige.
+- **Paso 10 de la sección 17** publica por REST (no WebSocket) hasta V7.
+- **Capa de API**: solo Django Ninja; DRF no se incorporó porque no hizo falta
+  (el propio doc lo dejaba como opcional).
+- **Panel interno**: Django Admin cumple el rol de curaduría previsto, sin UI
+  extra.
