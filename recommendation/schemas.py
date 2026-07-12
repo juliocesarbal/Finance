@@ -70,6 +70,7 @@ class ScoringRunOut(Schema):
     scored: int
     errors: int
     escalated: list[str]
+    note: str | None = None
     ranking: list[dict]
 
 

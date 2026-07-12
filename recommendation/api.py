@@ -65,6 +65,15 @@ def ranking(request):
     return sorted(items, key=lambda i: -(i["agent_score"] or i["mechanical_score"]))
 
 
+# Nota: /run debe declararse ANTES que /{ticker} — Django resuelve en orden
+# de declaración y "run" matchearía el patrón dinámico (solo GET → 405).
+@router.post("/run", response=ScoringRunOut)
+def run_scoring(request, escalate: bool = False):
+    """Corre la etapa 1 (mecánica) sobre el universo. `escalate=true` encola
+    además la etapa 2 (agente) para el top N vía Celery."""
+    return run_universe_scoring(escalate=escalate, sync_agent=False)
+
+
 @router.get("/{ticker}", response={200: RecommendationOut, 404: MessageOut})
 def recommendation_detail(request, ticker: str):
     asset = get_object_or_404(Asset, ticker__iexact=ticker)
@@ -81,10 +90,3 @@ def agent_review_detail(request, ticker: str):
     if review is None:
         return 404, {"detail": f"Sin revisión del agente para {asset.ticker}."}
     return 200, review
-
-
-@router.post("/run", response=ScoringRunOut)
-def run_scoring(request, escalate: bool = False):
-    """Corre la etapa 1 (mecánica) sobre el universo. `escalate=true` encola
-    además la etapa 2 (agente) para el top N vía Celery."""
-    return run_universe_scoring(escalate=escalate, sync_agent=False)

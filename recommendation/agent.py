@@ -317,8 +317,16 @@ def _get_client():
             "Configurá ANTHROPIC_API_KEY en .env para correr el agente de verificación."
         )
     import anthropic
+    import httpx
 
-    return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    # En esta red el handshake TLS hacia api.anthropic.com es lento de forma
+    # intermitente: con el connect timeout default (5 s) y 2 reintentos las
+    # corridas fallan en ráfaga. Más margen y más reintentos lo absorben.
+    return anthropic.Anthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=httpx.Timeout(600.0, connect=20.0),
+        max_retries=4,
+    )
 
 
 def run_agent_review(
