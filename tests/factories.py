@@ -11,7 +11,8 @@ class UserFactory(factory.django.DjangoModelFactory):
         model = get_user_model()
         django_get_or_create = ("username",)
 
-    username = factory.Sequence(lambda n: f"user{n}")
+    username = factory.Sequence(lambda n: f"user{n}@example.com")
+    email = factory.LazyAttribute(lambda o: o.username)
 
 
 class AssetFactory(factory.django.DjangoModelFactory):

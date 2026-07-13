@@ -13,6 +13,10 @@ env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     CORS_ALLOWED_ORIGINS=(list, []),
+    # Orígenes desde los que Django acepta mutaciones con cookie de sesión.
+    # Los navegadores mandan header Origin en cada POST y el proxy de Next
+    # reescribe el Host, así que hay que confiar explícitamente en el front.
+    CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:3000", "http://127.0.0.1:3000"]),
     REDIS_URL=(str, "redis://localhost:6379/0"),
     CELERY_BROKER_URL=(str, "redis://localhost:6379/1"),
     ANTHROPIC_API_KEY=(str, ""),
@@ -39,6 +43,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Terceros
     "corsheaders",
+    # Cuentas: registro/login por sesión (email como identificador)
+    "accounts",
     # Apps de dominio (sección 4 del documento)
     "core",
     "market",
@@ -121,6 +127,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 # ---------------------------------------------------------------- Celery
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")

@@ -2,7 +2,6 @@
 import logging
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from market.models import Asset, AssetType, MarketPrice
@@ -15,15 +14,6 @@ EMERGING_COUNTRIES = {
     "argentina", "brazil", "bolivia", "chile", "colombia", "mexico", "peru",
     "india", "indonesia", "vietnam", "china", "south africa", "turkey", "nigeria",
 }
-
-
-def get_default_user():
-    """MVP single-user: las carteras pertenecen al primer usuario (o uno local)."""
-    User = get_user_model()
-    user = User.objects.order_by("id").first()
-    if user is None:
-        user = User.objects.create_user(username="local", password=None)
-    return user
 
 
 def current_price_for(asset: Asset) -> Decimal | None:

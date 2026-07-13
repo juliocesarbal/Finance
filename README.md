@@ -20,6 +20,7 @@ financiero profesional (sección 20 del documento).
 
 | App | Qué hace (sección del doc) |
 |---|---|
+| `accounts` | Registro/login/logout/me por sesión de Django (email como identificador) |
 | `core` | EvidenceSource + score de confiabilidad de fuentes A+–E (9, 15.5) |
 | `market` | Assets, precios OHLCV, indicadores técnicos SMA/RSI/MACD/Bollinger (4.1, 4.2) |
 | `news` | Ingesta dual yfinance+RSS, categorías, sentimiento, impacto (4.4) |
@@ -133,10 +134,20 @@ discovery semanal. Sin Celery, `refresh_all` hace lo mismo bajo demanda.
 - Sin frases absolutas ("compra segura", "ganancia garantizada") → guardrail
   con filtro regex aplicado a la salida del agente antes de persistir (sección 20).
 
+## Autenticación (multi-usuario)
+
+La API usa **sesión de Django** (cookie + CSRF, sin JWT): `POST /api/auth/register`
+(crea la cuenta con email + contraseña y deja la sesión iniciada), `POST /api/auth/login`,
+`POST /api/auth/logout` y `GET /api/auth/me` (además siembra la cookie `csrftoken`).
+Los routers `portfolio` y `simulation` exigen sesión y cada usuario ve **solo lo
+suyo**; los datos de mercado compartidos (market, news, fundamentals, risk,
+recommendation, experts, discovery) siguen públicos. En mutaciones hay que enviar
+el header `X-CSRFToken` con el valor de la cookie (el frontend ya lo hace).
+
 ## Pendientes conocidos (roadmap V7 del doc)
 
 - WebSockets (Django Channels) para alertas en tiempo real.
 - Rebalanceo con impacto fiscal de comisiones.
 - Indicadores macro globales y reportes PDF.
 - Fuentes ampliadas 8.6 (NewsAPI, Finnhub, TipRanks…) para cruzar consenso.
-- Frontend Next.js (el dashboard consume esta API).
+- Recuperación/cambio de contraseña y verificación de email (hoy solo alta y login).

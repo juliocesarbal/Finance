@@ -5,7 +5,7 @@ import pytest
 
 from market.providers import set_provider
 from tests.fakes import FakeProvider
-from tests.factories import AssetFactory
+from tests.factories import AssetFactory, UserFactory
 from tests.helpers import make_price_frame, store_prices
 
 pytestmark = pytest.mark.django_db
@@ -13,6 +13,13 @@ pytestmark = pytest.mark.django_db
 
 def _post(client, url, payload):
     return client.post(url, data=json.dumps(payload), content_type="application/json")
+
+
+@pytest.fixture
+def auth_client(client):
+    """Cliente con sesión iniciada: portfolio y simulation exigen auth."""
+    client.force_login(UserFactory())
+    return client
 
 
 def test_health_endpoint(client):
@@ -47,9 +54,9 @@ def test_prices_and_technical_endpoints(client):
     assert 0 <= technical.json()["score"] <= 100
 
 
-def test_simulation_endpoint(client):
+def test_simulation_endpoint(auth_client):
     response = _post(
-        client, "/api/simulation/run",
+        auth_client, "/api/simulation/run",
         {"initial_capital": 1000, "monthly_contribution": 100, "years": 2,
          "expected_return": 0.08, "volatility": 0.15, "persist": True},
     )
@@ -59,18 +66,18 @@ def test_simulation_endpoint(client):
     assert body["simulation_id"] is not None
 
 
-def test_portfolio_flow(client):
+def test_portfolio_flow(auth_client):
     set_provider(FakeProvider(info={}))
     asset = AssetFactory(ticker="APIF")
     store_prices(asset, make_price_frame(n=30, seed=5))
 
-    portfolio_id = _post(client, "/api/portfolio", {"name": "Mi cartera"}).json()["id"]
+    portfolio_id = _post(auth_client, "/api/portfolio", {"name": "Mi cartera"}).json()["id"]
     position = _post(
-        client, f"/api/portfolio/{portfolio_id}/positions",
+        auth_client, f"/api/portfolio/{portfolio_id}/positions",
         {"ticker": "APIF", "quantity": 10, "average_price": 50},
     )
     assert position.status_code == 200
-    detail = client.get(f"/api/portfolio/{portfolio_id}").json()
+    detail = auth_client.get(f"/api/portfolio/{portfolio_id}").json()
     assert detail["total_value"] > 0
     assert len(detail["positions"]) == 1
 

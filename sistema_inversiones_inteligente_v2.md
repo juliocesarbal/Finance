@@ -799,9 +799,15 @@ Con este enfoque, la plataforma funciona como una herramienta de aprendizaje, an
   como administrador → reiniciar → Docker Desktop → `docker compose up -d redis`
   → worker `--pool=solo` + beat. Mientras tanto `refresh_all` cubre la cadencia
   a demanda. Alternativa sin Docker: Redis gestionado en Railway.
-- ☐ **Autenticación de la API**: hoy es single-user (carteras del usuario
-  local, endpoints sin auth). JWT/sesiones + CORS definitivo llegan con el
-  frontend. Crear superusuario para `/admin` (`createsuperuser`).
+- ✔ **Autenticación de la API** (2026-07-13): app `accounts` con registro/
+  login/logout/me por **sesión de Django** (email como identificador; cookie +
+  CSRF, sin JWT). Los routers `portfolio` y `simulation` exigen sesión
+  (`django_auth`) y filtran por `request.user`; `Simulation`/`BacktestRun`
+  ganaron FK `user` (migración `simulation/0002`) y validan que la cartera
+  vinculada sea propia. `get_default_user()` eliminado. El resto de routers
+  (datos de mercado compartidos) sigue público. Pendiente menor: crear
+  superusuario para `/admin` (`createsuperuser`) y reasignar/limpiar las
+  carteras del viejo usuario `local`.
 - ☐ **CI (GitHub Actions, 16.4)**: no configurada; el repo git es local y sin
   remote. Falta workflow de tests + lint (ruff) al pushear.
 - ☐ **Despliegue a producción del backend**: DEBUG=False, `ALLOWED_HOSTS`,

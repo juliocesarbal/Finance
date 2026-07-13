@@ -1,4 +1,8 @@
-"""Endpoints de cartera (CRUD + valorización + rebalanceo)."""
+"""Endpoints de cartera (CRUD + valorización + rebalanceo).
+
+El router se monta con ``auth=django_auth`` (config/api.py): siempre hay un
+``request.user`` autenticado y cada consulta se acota a sus carteras.
+"""
 from decimal import Decimal
 
 from django.shortcuts import get_object_or_404
@@ -25,13 +29,13 @@ router = Router()
 
 @router.get("", response=list[PortfolioOut])
 def list_portfolios(request):
-    return Portfolio.objects.filter(user=services.get_default_user())
+    return Portfolio.objects.filter(user=request.user)
 
 
 @router.post("", response=PortfolioOut)
 def create_portfolio(request, payload: PortfolioIn):
     portfolio, _ = Portfolio.objects.get_or_create(
-        user=services.get_default_user(),
+        user=request.user,
         name=payload.name,
         defaults={"base_currency": payload.base_currency},
     )
@@ -41,7 +45,7 @@ def create_portfolio(request, payload: PortfolioIn):
 @router.get("/{portfolio_id}", response=PortfolioDetailOut)
 def portfolio_detail(request, portfolio_id: int):
     portfolio = get_object_or_404(
-        Portfolio, id=portfolio_id, user=services.get_default_user()
+        Portfolio, id=portfolio_id, user=request.user
     )
     summary = services.revalue_portfolio(portfolio)
     return {
@@ -59,7 +63,7 @@ def portfolio_detail(request, portfolio_id: int):
 @router.delete("/{portfolio_id}", response={204: None})
 def delete_portfolio(request, portfolio_id: int):
     portfolio = get_object_or_404(
-        Portfolio, id=portfolio_id, user=services.get_default_user()
+        Portfolio, id=portfolio_id, user=request.user
     )
     portfolio.delete()
     return 204, None
@@ -68,7 +72,7 @@ def delete_portfolio(request, portfolio_id: int):
 @router.post("/{portfolio_id}/positions", response=PositionOut)
 def add_position(request, portfolio_id: int, payload: PositionIn):
     portfolio = get_object_or_404(
-        Portfolio, id=portfolio_id, user=services.get_default_user()
+        Portfolio, id=portfolio_id, user=request.user
     )
     asset, created = Asset.objects.get_or_create(ticker=payload.ticker.upper())
     if created:
@@ -95,7 +99,7 @@ def update_position(request, position_id: int, payload: PositionUpdateIn):
     position = get_object_or_404(
         PortfolioPosition,
         id=position_id,
-        portfolio__user=services.get_default_user(),
+        portfolio__user=request.user,
     )
     data = payload.dict(exclude_unset=True)
     for field in ("quantity", "average_price", "fees"):
@@ -114,7 +118,7 @@ def delete_position(request, position_id: int):
     position = get_object_or_404(
         PortfolioPosition,
         id=position_id,
-        portfolio__user=services.get_default_user(),
+        portfolio__user=request.user,
     )
     portfolio = position.portfolio
     position.delete()
@@ -125,7 +129,7 @@ def delete_position(request, position_id: int):
 @router.get("/{portfolio_id}/rebalance", response=RebalanceOut)
 def rebalance(request, portfolio_id: int, threshold: float = 1.0):
     portfolio = get_object_or_404(
-        Portfolio, id=portfolio_id, user=services.get_default_user()
+        Portfolio, id=portfolio_id, user=request.user
     )
     return services.rebalance_suggestions(portfolio, threshold_pct=threshold)
 
@@ -133,7 +137,7 @@ def rebalance(request, portfolio_id: int, threshold: float = 1.0):
 @router.get("/{portfolio_id}/concentration", response=ConcentrationOut)
 def portfolio_concentration(request, portfolio_id: int):
     portfolio = get_object_or_404(
-        Portfolio, id=portfolio_id, user=services.get_default_user()
+        Portfolio, id=portfolio_id, user=request.user
     )
     services.revalue_portfolio(portfolio)
     return services.concentration(portfolio)

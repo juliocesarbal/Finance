@@ -8,7 +8,6 @@ from market.models import AssetType, MarketPrice
 from portfolio.models import Portfolio, PortfolioPosition
 from portfolio.services import (
     concentration,
-    get_default_user,
     rebalance_suggestions,
     revalue_portfolio,
 )
@@ -120,9 +119,3 @@ def test_concentration_sums_and_exposures():
     assert result["crypto_exposure_pct"] == pytest.approx(40.0)
     assert result["tech_exposure_pct"] == pytest.approx(60.0)
     assert result["hhi"] == pytest.approx(0.6**2 + 0.4**2, rel=1e-3)
-
-
-def test_get_default_user_creates_local_user_once():
-    user1 = get_default_user()
-    user2 = get_default_user()
-    assert user1 == user2

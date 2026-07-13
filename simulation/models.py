@@ -1,4 +1,5 @@
 """Modelos de simulación (15.9) y backtesting (4.7)."""
+from django.conf import settings
 from django.db import models
 
 from core.models import TimeStampedModel
@@ -11,6 +12,11 @@ class Simulation(TimeStampedModel):
     hipotéticas, jamás garantías de rendimiento futuro.
     """
 
+    # null: filas anteriores a la autenticación por usuario (sin dueño conocido)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.CASCADE, related_name="simulations",
+    )
     portfolio = models.ForeignKey(
         "portfolio.Portfolio", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="simulations",
@@ -41,6 +47,11 @@ class Simulation(TimeStampedModel):
 class BacktestRun(TimeStampedModel):
     """Resultado de backtesting con las métricas de la tabla 4.7."""
 
+    # null: filas anteriores a la autenticación por usuario (sin dueño conocido)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.CASCADE, related_name="backtests",
+    )
     asset = models.ForeignKey(
         "market.Asset", on_delete=models.CASCADE, related_name="backtests"
     )

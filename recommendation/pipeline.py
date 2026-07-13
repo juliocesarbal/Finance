@@ -58,7 +58,6 @@ def _run_agent_reviews_in_background(candidates: list[dict]) -> bool:
         from .agent import AgentFailedError, AgentUnavailableError, run_agent_review
 
         try:
-            close_old_connections()
             for result in candidates:
                 ticker = result["ticker"]
                 try:
@@ -72,8 +71,14 @@ def _run_agent_reviews_in_background(candidates: list[dict]) -> bool:
                     logger.warning("Agente para %s: %s", ticker, exc)
                 except Exception:
                     logger.exception("Agente (fallback) falló para %s", ticker)
+                finally:
+                    # Libera la conexión entre tickers: cada uno espera varios
+                    # minutos al LLM, y sin este cierre el hilo la mantiene
+                    # abierta e inactiva durante toda la corrida (puede agotar
+                    # el pool de Postgres mientras el usuario navega el resto
+                    # de la app).
+                    close_old_connections()
         finally:
-            close_old_connections()
             _agent_fallback_lock.release()
 
     threading.Thread(target=worker, name="agent-reviews-fallback", daemon=True).start()

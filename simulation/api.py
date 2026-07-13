@@ -1,9 +1,14 @@
-"""Endpoints de simulación y backtesting."""
+"""Endpoints de simulación y backtesting.
+
+El router se monta con ``auth=django_auth`` (config/api.py): lo persistido
+queda a nombre de ``request.user`` y solo puede colgarse de carteras propias.
+"""
 from django.shortcuts import get_object_or_404
 from ninja import Router
 
 from market.models import Asset
 from market.services import load_price_frame
+from portfolio.models import Portfolio
 
 from .models import BacktestRun, Simulation
 from .schemas import BacktestIn, BacktestOut, MessageOut, SimulationIn, SimulationOut
@@ -23,13 +28,19 @@ def run_simulation(request, payload: SimulationIn):
     )
     simulation_id = None
     if payload.persist:
+        portfolio = None
+        if payload.portfolio_id is not None:
+            portfolio = get_object_or_404(
+                Portfolio, id=payload.portfolio_id, user=request.user
+            )
         asset = (
             Asset.objects.filter(ticker__iexact=payload.ticker).first()
             if payload.ticker else None
         )
         sim = Simulation.objects.create(
+            user=request.user,
             asset=asset,
-            portfolio_id=payload.portfolio_id,
+            portfolio=portfolio,
             scenario_name=payload.scenario_name,
             initial_capital=payload.initial_capital,
             monthly_contribution=payload.monthly_contribution,
@@ -63,6 +74,7 @@ def run_backtest(request, payload: BacktestIn):
     backtest_id = None
     if payload.persist:
         run = BacktestRun.objects.create(
+            user=request.user,
             asset=asset,
             strategy=result["strategy"],
             params=result["params"],

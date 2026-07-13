@@ -329,6 +329,23 @@ def _get_client():
     )
 
 
+def _supports_adaptive_thinking(client, model: str) -> bool:
+    """Modelos más baratos (p.ej. Haiku) no aceptan thinking adaptativo y
+    devuelven 400 si se los manda; lo chequeamos vía la Models API en vez de
+    asumir por nombre, para no romper cada vez que AGENT_MODEL cambia. Si la
+    consulta falla (red, o un cliente de test sin `.models`) asumimos que no
+    hay soporte: sin thinking es una degradación aceptable, un 400 no.
+    """
+    try:
+        return client.models.retrieve(model).capabilities.thinking.types.adaptive.supported
+    except Exception:
+        logger.warning(
+            "No se pudo confirmar soporte de thinking adaptativo para %s; se omite.",
+            model,
+        )
+        return False
+
+
 def run_agent_review(
     asset: Asset,
     mechanical_score: float | None = None,
@@ -344,6 +361,7 @@ def run_agent_review(
         mechanical_score = latest.score if latest else 50.0
 
     session = AgentSession(asset)
+    thinking_supported = _supports_adaptive_thinking(client, settings.AGENT_MODEL)
     messages = [
         {
             "role": "user",
@@ -369,7 +387,7 @@ def run_agent_review(
         if force_submit:
             # tool_choice forzado es incompatible con thinking → se omite thinking
             kwargs["tool_choice"] = {"type": "tool", "name": "submit_review"}
-        else:
+        elif thinking_supported:
             kwargs["thinking"] = {"type": "adaptive"}
 
         response = client.messages.create(**kwargs)

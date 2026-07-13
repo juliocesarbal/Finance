@@ -1,7 +1,14 @@
-"""API raíz (Django Ninja): un router por app de dominio, montada en /api."""
+"""API raíz (Django Ninja): un router por app de dominio, montada en /api.
+
+Los routers de datos de usuario (portfolio, simulation) exigen sesión de
+Django (``django_auth``: cookie + CSRF); el resto es de solo consulta sobre
+datos de mercado compartidos y queda público.
+"""
 from django.db import connection
 from ninja import NinjaAPI
+from ninja.security import django_auth
 
+from accounts.api import router as accounts_router
 from discovery.api import router as discovery_router
 from experts.api import router as experts_router
 from fundamentals.api import router as fundamentals_router
@@ -23,11 +30,12 @@ api = NinjaAPI(
     ),
 )
 
+api.add_router("/auth", accounts_router, tags=["auth"])
 api.add_router("/market", market_router, tags=["market"])
 api.add_router("/news", news_router, tags=["news"])
 api.add_router("/fundamentals", fundamentals_router, tags=["fundamentals"])
-api.add_router("/portfolio", portfolio_router, tags=["portfolio"])
-api.add_router("/simulation", simulation_router, tags=["simulation"])
+api.add_router("/portfolio", portfolio_router, tags=["portfolio"], auth=django_auth)
+api.add_router("/simulation", simulation_router, tags=["simulation"], auth=django_auth)
 api.add_router("/risk", risk_router, tags=["risk"])
 api.add_router("/recommendation", recommendation_router, tags=["recommendation"])
 api.add_router("/experts", experts_router, tags=["experts"])
