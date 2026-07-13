@@ -26,3 +26,5 @@ pytest>=8.3
 pytest-django>=4.11
 factory_boy>=3.3
 responses>=0.25
+
+gunicorn>=23,<24
