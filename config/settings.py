@@ -20,7 +20,7 @@ env = environ.Env(
     REDIS_URL=(str, "redis://localhost:6379/0"),
     CELERY_BROKER_URL=(str, "redis://localhost:6379/1"),
     ANTHROPIC_API_KEY=(str, ""),
-    AGENT_MODEL=(str, "claude-opus-4-8"),
+    AGENT_MODEL=(str, "claude-haiku-4-5"),
     AGENT_TOP_N=(int, 10),
     AGENT_SCORE_THRESHOLD=(float, 65.0),
     WATCHLIST=(list, [
@@ -177,7 +177,8 @@ WATCHLIST = env("WATCHLIST")
 
 # Agente de verificación (sección 5.2) y pipeline en dos etapas (5.3)
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY")
-AGENT_MODEL = env("AGENT_MODEL")
+# `or`: un AGENT_MODEL= vacío en .env no debe romper al agente
+AGENT_MODEL = env("AGENT_MODEL") or "claude-haiku-4-5"
 AGENT_TOP_N = env("AGENT_TOP_N")
 AGENT_SCORE_THRESHOLD = env("AGENT_SCORE_THRESHOLD")
 

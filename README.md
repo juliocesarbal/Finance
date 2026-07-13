@@ -85,7 +85,8 @@ entradas fijas debe ser una decisión explícita (sección 16.6).
 ## El agente de verificación (sección 5.2)
 
 Requiere `ANTHROPIC_API_KEY` en `.env` (modelo configurable con `AGENT_MODEL`,
-default `claude-opus-4-8`). Corre **solo** sobre el top N del ranking mecánico
+default `claude-haiku-4-5` — el más económico; si el modelo no soporta thinking
+adaptativo el agente lo omite solo). Corre **solo** sobre el top N del ranking mecánico
 (`AGENT_SCORE_THRESHOLD`, `AGENT_TOP_N`) para mantener el costo acotado (5.3):
 
 ```powershell
